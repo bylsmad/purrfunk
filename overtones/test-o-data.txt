@@ -1,0 +1,18 @@
+data;
+template template-overtone;
+float seq;
+float freq_ratio;
+float harmonic;
+float amp_ratio;
+float tracknum;
+float f;
+float amp;
+float newflag;
+float env;
+float pitch;
+float note;
+;
+;
+template-overtone 0 1 1 1 2 440 0.8 1 0.2 440 440;
+template-overtone 0 2.03 2 0.5 2 880 0.4 0 0.2 440 440;
+template-overtone 0 0.42 -1 0.1 3 200 0.08 1 0.2 440 440;
