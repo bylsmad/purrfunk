@@ -23,5 +23,5 @@ install-doc:
 	install *.pd $(prefix)/doc/5.reference
 
 install: install-doc
-	@test -d $(prefix)/extra || mkdir -p $(prefix)/extra
-	install *.pd_linux $(prefix)/extra
+	@test -d $(prefix)/extra/purrfunk || mkdir -p $(prefix)/extra/purrfunk
+	install *.pd_linux $(prefix)/extra/purrfunk

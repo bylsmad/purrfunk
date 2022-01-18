@@ -12,35 +12,6 @@
 
 static t_class *overtones_class;
 
-// structure for holding a transformation on selected overtones
-
-#define WHAT_FREQ 1
-#define WHAT_AMP 2
-#define WHAT_DB 3
-
-#define OP_SCALE 1
-#define OP_REPLACE 2
-
-#define SEL_EQ 1
-#define SEL_ODD 2
-#define SEL_EVEN 3
-#define SEL_GT 4
-#define SEL_GE 5
-#define SEL_LT 6
-#define SEL_LE 7
-#define SEL_ALL 8
-#define SEL_OUTLIER 9
-
-typedef struct _op
-{
-  int what;
-  int op;
-  t_float op_arg;
-  int selector;
-  t_float selector_arg;
-  struct _op *next;
-} t_op;
-
 typedef struct _tone
 {
   t_float t_freq;
@@ -55,16 +26,13 @@ typedef struct _overtones
   t_object x_obj;
   int x_ntone;
   t_tone *x_tonev;
-  t_op *x_op_head;
   t_float x_fundamental_freq;
   int x_fundamental_index;
   int *x_top_score_history;
   t_float x_fundamental_amp;
   int x_print_it;
-  // left outlet gives output in same format as input - 4 element lists
+  // outlet gives output in 5 element lists, first element is harmonic number
   t_outlet *x_out_one;
-  // right outlet gives output in 5 element lists, first element is harmonic number
-  t_outlet *x_out_two;
 
 } t_overtones;
 
@@ -131,116 +99,16 @@ static void overtones_out(t_overtones* x)
   t_float freq, ratio;
   t_float amp,  amp_ratio;
   t_float amp_percent;
-  t_op *op;
-  
   for ( i = 0; i < x->x_ntone; i++) {
-
-    freq = x->x_tonev[i].t_freq;
-    amp = x->x_tonev[i].t_amp;
-
-    op = x->x_op_head;
-    while ( op ) {
-      match = 0;
-      if ( op->selector == SEL_ALL ) {
-        match = 1;
-      } else if ( x->x_tonev[i].t_harmonic == -1 ) {
-        if ( op->selector == SEL_OUTLIER ) {
-          match = 1;
-        }
-      } else if (   ( op->selector == SEL_EQ && x->x_tonev[i].t_harmonic == op->selector_arg )
-          || ( op->selector == SEL_ODD && x->x_tonev[i].t_harmonic != 1 && x->x_tonev[i].t_harmonic % 2 == 1 )
-          || ( op->selector == SEL_EVEN && x->x_tonev[i].t_harmonic % 2 == 0 )
-          || ( op->selector == SEL_GT && x->x_tonev[i].t_harmonic > op->selector_arg )
-          || ( op->selector == SEL_LT && x->x_tonev[i].t_harmonic < op->selector_arg )
-                ) {
-          match = 1;
-      }
-      ratio = 0.0;
-      if ( x->x_fundamental_freq > 0.0 ) {
-        ratio = x->x_tonev[i].t_freq / x->x_fundamental_freq;
-      }
-      if ( op->selector == SEL_GE && ratio >= op->selector_arg ) {
-        match = 1;
-      }
-      if ( op->selector == SEL_LE && ratio <= op->selector_arg ) {
-        match = 1;
-      }
-
-      if ( match ) {
-        switch ( op->what ) {
-          case WHAT_FREQ:
-            switch ( op->op ) {
-              case OP_SCALE:
-                freq *= op->op_arg;
-              break;
-              case OP_REPLACE:
-                freq = op->op_arg;
-              break;
-            }
-          break;
-          case WHAT_AMP:
-            switch ( op->op ) {
-              case OP_SCALE:
-                amp *= op->op_arg;
-              break;
-              case OP_REPLACE:
-                amp = op->op_arg * x->x_fundamental_amp;
-              break;
-            }
-          case WHAT_DB:
-            switch ( op->op ) {
-              case OP_SCALE:
-                amp *= exp( ( LOGTEN * 0.05) * op->op_arg);
-              break;
-              case OP_REPLACE:
-                amp = exp( ( LOGTEN * 0.05) * op->op_arg) * x->x_fundamental_amp;
-              break;
-            }
-          break;
-        }
-      }
-
-      op = op->next;
-    } 
-/*    if ( x->x_print_it && x->x_tonev[i].t_newflag != -1 ) {
-      amp_percent = rint(10000.0 * amp / x->x_fundamental_amp) / 100.0; 
-      if ( x->x_tonev[i].t_harmonic == -1 ) {
-        post("OUT: outlier %f: f = %f a = %f raw_a = %f",x->x_tonev[i].t_freq / x->x_fundamental_freq, freq, amp_percent,amp); 
-      } else {
-        post("OUT: harmonic %i: f = %f a = %f, raw_a = %f",x->x_tonev[i].t_harmonic, freq, amp_percent, amp);
-      }
-    }
-*/
-
-    // left output provides same data format as sigmund~ tracks
-    t_atom at_one[4];
-    SETFLOAT(at_one, (t_float)i);
-    SETFLOAT(at_one+1, freq);
-    SETFLOAT(at_one+2, amp);
-    SETFLOAT(at_one+3, x->x_tonev[i].t_newflag);
-    outlet_list(x->x_out_one, &s_list, 4, at_one); 
-
-    // right output sends track plus two floats for overtone number analysis
-    t_atom at[8];
-    ratio = 0.0;
-    // ratio of freq to fundamental
-    if ( x->x_fundamental_freq > 0.0 ) {
-      ratio = x->x_tonev[i].t_freq / x->x_fundamental_freq;
-    }
-    amp_ratio = 0.0;
-    if ( x->x_fundamental_amp > 0.0 ) {
-      amp_ratio = x->x_tonev[i].t_amp / x->x_fundamental_amp;
-    }
-    SETFLOAT(at, ratio);
+    // output same as sigmund npeak input but prepended with harmonic number
+    t_atom at[5];
     // harmonic number or -1 if not an integral mult of fundamental
-    SETFLOAT(at+1, x->x_tonev[i].t_harmonic);
-    SETFLOAT(at+2, amp_ratio) ;
-    SETFLOAT(at+3, (t_float)i);
-    SETFLOAT(at+4, freq);
-    SETFLOAT(at+5, amp);
-    SETFLOAT(at+6, x->x_tonev[i].t_newflag);
-    SETFLOAT(at+7, x->x_tonev[i].t_score);
-    outlet_list(x->x_out_two, &s_list, 7, at); 
+    SETFLOAT(at, x->x_tonev[i].t_harmonic);
+    SETFLOAT(at+1, (t_float)i);
+    SETFLOAT(at+2, x->x_tonev[i].t_freq);
+    SETFLOAT(at+3, x->x_tonev[i].t_amp);
+    SETFLOAT(at+4, x->x_tonev[i].t_newflag);
+    outlet_list(x->x_out_one, &s_list, 5, at); 
   }
 }
 
@@ -257,74 +125,6 @@ void overtones_list(t_overtones *x, t_symbol *s, int argc, t_atom *argv) {
     post("overtones expects lists of 4 numbers from tracks output of sigmund~");
   }
 }
-
-void overtones_transform_add(t_overtones *x, t_symbol *what, t_symbol *op_op, t_floatarg op_arg,
-  t_symbol *selector, t_floatarg selector_arg) {
-  t_op *op = getbytes(sizeof(t_op));
-  t_op *prev_op;
-  op->next = (t_op *) 0;
-  if (what == gensym("freq")) {
-    op->what = WHAT_FREQ;
-  } else if ( what == gensym("amp")) {
-    op->what = WHAT_AMP;
-  } else if ( what == gensym("db")) {
-    op->what = WHAT_DB;
-  } else {
-    post("ERROR overtones transform first argument not recognized, valid args are freq and amp");
-    return;
-  }
-
-  if ( ( op->what == WHAT_FREQ || op->what == WHAT_AMP ) && op_op == gensym("*")) {  
-    op->op = OP_SCALE;
-  } else if ( op->what == WHAT_DB && ( op_op == gensym("+") || op_op == gensym("-") ) ) {
-    op->op = OP_SCALE;
-  } else if ( op_op == gensym("=")) {
-    op->op = OP_REPLACE;
-  } else {
-    post("ERROR overtones transform second argument not recognized, valid args are = and * for amp and freq; =, + and - for db");
-    return;
-  }
-
-  op->op_arg = op_arg;
-  if ( op_op == gensym("-") ) {
-    op->op_arg *= -1.0;
-  }
-
-  if ( selector == gensym("=") ) {
-    op->selector = SEL_EQ;
-  } else if ( selector == gensym("odd") ) {
-    op->selector = SEL_ODD;
-  } else if ( selector == gensym("even") ) {
-    op->selector = SEL_EVEN;
-  } else if ( selector == gensym(">") ) {
-    op->selector = SEL_GT;
-  } else if ( selector == gensym(">=") ) {
-    op->selector = SEL_GE;
-  } else if ( selector == gensym("<") ) {
-    op->selector = SEL_LT;
-  } else if ( selector == gensym("<=") ) {
-    op->selector = SEL_LE;
-  } else if ( selector == gensym("all") ) {
-    op->selector = SEL_ALL;
-  } else if ( selector == gensym("outlier") ) {
-    op->selector = SEL_OUTLIER;
-  } else {
-    post("ERROR fourth parameter of overtones transform not recognized known values are = odd even > < all outlier");
-    return;
-  }
-
-  op->selector_arg = selector_arg;
-
-  if ( x->x_op_head ) {
-    prev_op = x->x_op_head;
-    while ( prev_op->next ) {
-      prev_op = prev_op->next;
-    }
-    prev_op->next = op;
-  } else {
-    x->x_op_head = op;
-  }
-} 
 
 void overtones_enable_print(t_overtones *x) {
   x->x_print_it = 1;
@@ -478,23 +278,10 @@ void overtones_bang(t_overtones *x) {
   }
 }
 
-void overtones_clear(t_overtones *x) {
-  t_op *op;
-  op = x->x_op_head;
-  while ( op ) {
-    op = op->next;
-    freebytes(op, sizeof(t_op));
-  }
-  x->x_op_head = (t_op *) 0;
-
-}
-
-
 void overtones_free(t_overtones *x)
 {
   if (x->x_tonev)
     freebytes(x->x_tonev, x->x_ntone * sizeof(*x->x_tonev));
-  overtones_clear(x);
 }
 
 
@@ -503,7 +290,6 @@ static void *overtones_new(t_floatarg ntone_param)
     int i;
     t_overtones *x = (t_overtones *)pd_new(overtones_class);
     x->x_out_one = outlet_new(&x->x_obj, &s_list);
-    x->x_out_two = outlet_new(&x->x_obj, &s_list);
     x->x_ntone = (int) ntone_param;
     x->x_top_score_history = (int *)getbytes(TOP_SCORE_HISTORY_LENGTH * sizeof(int));
     for ( i = 0; i < TOP_SCORE_HISTORY_LENGTH; i++ ) {
@@ -519,7 +305,6 @@ static void *overtones_new(t_floatarg ntone_param)
       x->x_tonev[i].t_newflag = -1;
     }
     x->x_print_it = 0;
-    x->x_op_head = (t_op *) 0;
 
     return (x);
 }
@@ -534,9 +319,4 @@ void overtones_setup(void)
   class_addbang(overtones_class,overtones_bang);
   class_addmethod(overtones_class,  
         (t_method)overtones_enable_print, gensym("print"), 0);  
-  class_addmethod(overtones_class,  
-        (t_method)overtones_transform_add, gensym("transform"), 
-        A_DEFSYMBOL, A_DEFSYMBOL, A_DEFFLOAT, A_DEFSYMBOL, A_DEFFLOAT,0);  
-  class_addmethod(overtones_class,  
-        (t_method)overtones_clear, gensym("clear"), 0);  
 }
