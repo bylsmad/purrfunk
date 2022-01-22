@@ -2,7 +2,7 @@
 #X obj 98 93 unpack f f f f;
 #X obj 101 197 pack f f f f;
 #X obj 148 143 *;
-#X obj 203 117 r \$1-shift;
+#X obj 203 117 r \$1-amp-mult;
 #X obj 87 3 inlet;
 #X obj 89 245 outlet;
 #X connect 0 0 1 0;
