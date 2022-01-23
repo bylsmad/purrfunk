@@ -95,10 +95,6 @@ static int comp_harmonic(const void *x, const void *y) {
 static void overtones_out(t_overtones* x)
 {
   int i;
-  int match;
-  t_float freq, ratio;
-  t_float amp,  amp_ratio;
-  t_float amp_percent;
   for ( i = 0; i < x->x_ntone; i++) {
     // output same as sigmund npeak input but prepended with harmonic number
     t_atom at[5];
@@ -162,7 +158,7 @@ void overtones_bang(t_overtones *x) {
   x->x_fundamental_amp = 0.0;
   int best_score_index = -1, change_fund_index;
   t_float max_amp = 0.0, min_fund_amp;
-  t_float max_fund_score;
+  t_float max_fund_score = 0.0;
   t_float distance, score;
   int i, j;
   int harmonic;

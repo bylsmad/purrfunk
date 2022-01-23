@@ -54,3 +54,6 @@ dkms.conf
 
 # output wavs
 *out.wav
+
+# test output
+# *.log
