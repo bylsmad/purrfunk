@@ -1,0 +1,19 @@
+#N canvas 247 226 450 300 12;
+#X obj 155 58 openpanel;
+#X obj 153 100 s fn;
+#X obj 168 28 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 1;
+#X obj 81 135 create_sigmund_out_csv;
+#X obj 97 94 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 1;
+#X obj 48 131 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 1;
+#X obj 32 172 create_overtones_out_csv;
+#X obj 8 162 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 1;
+#X obj -8 203 create_hpivot_csv;
+#X connect 0 0 1 0;
+#X connect 2 0 0 0;
+#X connect 4 0 3 0;
+#X connect 5 0 6 0;
+#X connect 7 0 8 0;

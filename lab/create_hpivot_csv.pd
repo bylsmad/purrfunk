@@ -1,0 +1,15 @@
+#N canvas 370 376 450 325 12;
+#X obj 110 157 shell;
+#X obj 180 43 r ofn;
+#X obj 133 87 symbol;
+#X msg 118 119 ./pivot_amp.py -i \$1;
+#X obj 112 45 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 1;
+#X obj 34 23 inlet;
+#X obj 154 197 print done;
+#X connect 0 1 6 0;
+#X connect 1 0 2 1;
+#X connect 2 0 3 0;
+#X connect 3 0 0 0;
+#X connect 4 0 2 0;
+#X connect 5 0 2 0;
